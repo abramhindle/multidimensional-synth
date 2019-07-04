@@ -21,7 +21,7 @@ SynthDef(\mysine, {
 	|msg|
 	msg.postln;
 	msg[ 1 .. ~n ].do {|x,i|
-		var base = 30*(1+i);
+		var base = 120*(1+i);
 		~synths[i].set(\freq, 2*base + (base*x))
 	}
 };
