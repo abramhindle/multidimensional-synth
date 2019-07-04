@@ -5,7 +5,7 @@ import numpy
 import liblo
 
 
-dims = 20
+dims = 10
 
 
 def sphere(x):
