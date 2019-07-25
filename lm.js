@@ -41,9 +41,9 @@ function defaultOptions(initialValues) {
         initialValues: initialValues,
         minValues: minValues,
         maxValues: maxValues,
-        gradientDifference: 10e-2,
+        gradientDifference: 10e-3,
         maxIterations: 100,
-        errorTolerance: 10e-4
+        errorTolerance: 10e-5
     };
 }
 
@@ -150,12 +150,26 @@ class PointModel {
         this.options = defaultOptions(this.initialValues);
         this.listeners = [];
         this.f = f;
+        this.fixI = false;
     }
     solve() {
         this.options.initialValues = this.copyOfVec();
+        this.options.minValues = new Array(dims).fill(-1.1);
+        this.options.maxValues = new Array(dims).fill(1.1);
+        if (this.fixI && this.lastI) {
+            var g = 1.05*this.values[this.lastI];
+            var s = 0.95*this.values[this.lastI];
+            if (g < s) {
+                var t = g;
+                g = s;
+                s = t;
+            }
+            this.options.maxValues[this.lastI] = g;
+            this.options.minValues[this.lastI] = s;
+        }
         var out = lmFit(this.f, this.options);
-        this.setVec( out.parameterValues );
-        console.log(out);
+        this.values = [...out.parameterValues];
+        // console.log(out);
     }
     addListener(listener) {
         this.listeners.push(listener);
@@ -169,13 +183,17 @@ class PointModel {
     }
     setDim(i, v) {
         this.values[i] = v;
+        this.lastI = i;
+        this.fixI = true;
         this.update();
     }
-    set setVec(v) {
+    setVec(v) {
         this.values = v;
+        this.fixI = false;
         this.update();
     }
     set setCopyVec(v) {
+        this.fixI = false;
         this.values = [...v];
         this.update();
     }
