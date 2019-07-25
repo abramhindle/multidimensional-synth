@@ -144,17 +144,25 @@ var model = {
 }
 
 class PointModel {
-    constructor(dims) {
+    constructor(dims,f) {
         this.dims = dims;
         this.values = new Array(this.dims).fill(0);
         this.options = defaultOptions(this.initialValues);
         this.listeners = [];
+        this.f = f;
+    }
+    solve() {
+        this.options.initialValues = this.copyOfVec();
+        var out = lmFit(this.f, this.options);
+        this.setVec( out.parameterValues );
+        console.log(out);
     }
     addListener(listener) {
         this.listeners.push(listener);
     }
     update() {
-        console.log(this.values);
+        this.solve();
+        // console.log(this.values);
         this.listeners.forEach( listener => {
             listener.update(this);
         });
@@ -177,7 +185,7 @@ class PointModel {
     get vec() {
         return this.values;
     }
-    get copyOfVec() {
+    copyOfVec() {
         return [...this.values];
     }
 }
@@ -195,3 +203,4 @@ function installSliders(domID, model) {
 }
 exports.installSliders = installSliders;
 exports.PointModel = PointModel;
+exports.HyperSphere = circle;
