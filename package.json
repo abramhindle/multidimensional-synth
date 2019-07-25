@@ -1,0 +1,16 @@
+{
+  "name": "multidimensionalsynth",
+  "version": "1.0.0",
+  "description": "Solvers on UIs for multidimensional constraints",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Abram Hindle",
+  "license": "ISC",
+  "dependencies": {
+    "fmin": "0.0.2",
+    "ml-levenberg-marquardt": "^2.0.0",
+    "optimization-js": "^1.5.0"
+  }
+}
