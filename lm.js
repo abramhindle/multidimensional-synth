@@ -152,6 +152,9 @@ class PointModel {
         this.f = f;
         this.fixI = false;
     }
+    get getDims() {
+        return this.dims;
+    }
     solve() {
         this.options.initialValues = this.copyOfVec();
         this.options.minValues = new Array(dims).fill(-1.1);
@@ -219,6 +222,75 @@ function installSliders(domID, model) {
     inputs.forEach( x => model.addListener( x ) );
     
 }
+function clamp(x,min,max) {
+    return Math.max(min, Math.min(max, x));
+}
+class PointPlot {
+    constructor(canvas, ctx) {
+        this.canvas = canvas;
+        this.ctx = ctx;
+        this.i = 0;
+        this.pmin = -1.1;
+        this.pmax = 1.1;
+        this.prange = this.pmax - this.pmin;
+    }
+    update(model) {
+        this.drawPoints(model);
+    }
+    drawPoint(col,row,x,y,color) {
+        let pmax = this.pmax;
+        let pmin = this.pmin;
+        if (x < pmin || x > pmax || y < pmin || y > pmax) {
+            return;
+        }
+        var yoffset = this.ph * row;
+        var xoffset = this.pw * col;
+        let prange = this.prange;
+        var px = xoffset + this.pw * (x - pmin)/prange;
+        var py = yoffset + this.ph * (y - pmin)/prange;        
+        var bw = 5;
+        ctx.fillStyle = color;
+        ctx.fillRect(px - bw/2, py - bw/2, bw, bw);
+    }
+    initCache(dims) {
+        if (this.cache === undefined) {
+            this.cache = _.range(dims).map( x => new Array(dims) );
+        }
+    }
+    getLastPoint(col,row) {
+        return this.cache[row][col];
+    }
+    putLastPoint(col,row,vx,vy,color) {
+        this.cache[row][col] = { x: vx, y: vy, color: color };
+    }
+    drawPoints(model) {
+        let dims = model.getDims;
+        this.initCache(dims);
+        let width = canvas.width;
+        let height = canvas.height;
+        this.pw = width / dims;
+        this.ph = height / dims;
+        for (let row = 0; row < dims; row++) {
+            for (let col = 0; col < dims; col++) {
+                let lastPoint = this.getLastPoint(col,row);
+                if (lastPoint === undefined) {
+                    
+                } else {
+                    this.drawPoint(col,row,lastPoint.x, lastPoint.y, lastPoint.color);
+                }
+                let vx = model.at(col);
+                let vy = model.at(row);
+                let color = `hsl( ${this.i % 360}, 75%, 50%)`;
+                let boldColor = `hsl( 61, 94%, 53%)`;
+                this.drawPoint(col,row,vx,vy,boldColor);
+                this.putLastPoint(col,row,vx,vy,color);
+            }
+        }
+        this.i++;
+    }
+}
+
 exports.installSliders = installSliders;
 exports.PointModel = PointModel;
 exports.HyperSphere = circle;
+exports.PointPlot = PointPlot;
