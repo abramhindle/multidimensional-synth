@@ -20,16 +20,17 @@
           <div class="flexcontainer">
             <div id="sliderbank">
             </div>
-            <canvas id="2Dcanvas" width="900" height="900"></canvas>
+            <canvas id="2Dcanvas" width="700" height="700"></canvas>
           </div>
           <script>
             var dims = 10;
             var canvas = document.getElementById('2Dcanvas');
             var ctx = canvas.getContext('2d');
-            model = new lmo.PointModel(dims,lmo.HyperSphere);
-            lmo.installSliders("sliderbank", model);
+            var model = new lmo.PointModel(dims,lmo.HyperSphere);
+            lmo.installSliders(dims, "sliderbank", model);
             var pointPlot = new lmo.PointPlot(canvas, ctx);
             model.addListener( pointPlot );
+            pointPlot.drawPoints( model );
           </script>
 	</body>        
 </html>
