@@ -1,8 +1,9 @@
+"use strict";
 // const LM = require('ml-levenberg-marquardt').default;
 const LM = require('ml-levenberg-marquardt');
 const Benchmark = require('benchmark');
 const _ = require('lodash');
-let dims = 10;
+// let dims = 10;
 // function that receives the parameters and returns
 // a function with the independent variable as a parameter
 function sinFunction([a, b]) {
@@ -23,31 +24,33 @@ let data = {
 };
 
 // array of initial parameter values
-let initialValues = new Array(dims).fill(0);
+// let initialValues = new Array(dims).fill(0);
 
 // Optionally, restrict parameters to minimum & maximum values
 /* let minValues = [
   -2,-2,-2
 ]; */
-let minValues = new Array(dims).fill(-2.0);
-let maxValues = new Array(dims).fill(2.0);
+// let minValues = new Array(dims).fill(-2.0);
+// let maxValues = new Array(dims).fill(2.0);
 /* let maxValues = [
   2,2,2
 ];
 */
-function defaultOptions(initialValues) {
+function defaultOptions(iV) {
+    let min = iV.map( x => -1.1 );
+    let max = iV.map( x =>  1.1 );
     return  {
         damping: 1.5,
-        initialValues: initialValues,
-        minValues: minValues,
-        maxValues: maxValues,
+        initialValues:  iV,
+        minValues:      min,
+        axValues:       max,
         gradientDifference: 10e-3,
         maxIterations: 100,
         errorTolerance: 10e-5
     };
 }
 
-const options = defaultOptions(initialValues);
+// const options = defaultOptions(initialValues);
 
 function lmFit(f, options) {
     // arbitrary X and Y
@@ -66,6 +69,7 @@ function lmFit(f, options) {
 function benchIt() {
     var errors = [];
     var suite = new Benchmark.Suite;
+    var initialValues = new Array(10).fill(0);
     suite.add('LM',function() {
         initialValues.forEach( (v,i) => initialValues[i] = Math.random() );
         let fittedParams = LM(data, circle, options);
@@ -139,15 +143,15 @@ class MySlider {
 // make a bank of sliders
 
 
-var model = {
-    dims: dims
-}
-
+// var model = {
+//     dims: dims
+// }
+// 
 class PointModel {
     constructor(dims,f) {
         this.dims = dims;
         this.values = new Array(this.dims).fill(0);
-        this.options = defaultOptions(this.initialValues);
+        this.options = defaultOptions([...this.values]);
         this.listeners = [];
         this.f = f;
         this.fixI = false;
@@ -157,8 +161,8 @@ class PointModel {
     }
     solve() {
         this.options.initialValues = this.copyOfVec();
-        this.options.minValues = new Array(dims).fill(-1.1);
-        this.options.maxValues = new Array(dims).fill(1.1);
+        this.options.minValues = new Array(this.dims).fill(-1.1);
+        this.options.maxValues = new Array(this.dims).fill(1.1);
         if (this.fixI && this.lastI) {
             var g = 1.05*this.values[this.lastI];
             var s = 0.95*this.values[this.lastI];
@@ -190,6 +194,11 @@ class PointModel {
         this.fixI = true;
         this.update();
     }
+    setDims(tuples) {
+        tuples.forEach( (t) => this.values[t[0]] = t[1] );
+        this.fixI = false;        
+        this.update();
+    }
     setVec(v) {
         this.values = v;
         this.fixI = false;
@@ -211,11 +220,11 @@ class PointModel {
     }
 }
 
-function installSliders(domID, model) {   
+function installSliders(dims, domID, model) {   
     var div = document.getElementById(domID);
     var inputs = _.range( dims ).map( function(i) {
-        readCB = () => model.at(i);
-        writeCB = (v) => model.setDim(i,v);
+        var readCB = () => model.at(i);
+        var writeCB = (v) => model.setDim(i,v);
         return new MySlider(readCB,writeCB);
     });
     inputs.forEach( x => { div.appendChild(document.createElement("br")); div.appendChild( x.domObject() ) } );
@@ -225,6 +234,13 @@ function installSliders(domID, model) {
 function clamp(x,min,max) {
     return Math.max(min, Math.min(max, x));
 }
+// patriques  https://stackoverflow.com/users/931738/patriques https://stackoverflow.com/a/18053642
+function getCursorPosition(canvas, event) {
+    const rect = canvas.getBoundingClientRect()
+    const x = event.clientX - rect.left
+    const y = event.clientY - rect.top
+    return { x: x, y: y};
+}
 class PointPlot {
     constructor(canvas, ctx) {
         this.canvas = canvas;
@@ -233,6 +249,7 @@ class PointPlot {
         this.pmin = -1.1;
         this.pmax = 1.1;
         this.prange = this.pmax - this.pmin;
+        this.installClickListeners();
     }
     update(model) {
         this.drawPoints(model);
@@ -265,7 +282,9 @@ class PointPlot {
     }
     drawPoints(model) {
         let dims = model.getDims;
+        this.dims = dims;
         this.initCache(dims);
+        this.lastModel = model;
         let width = canvas.width;
         let height = canvas.height;
         this.pw = width / dims;
@@ -287,6 +306,30 @@ class PointPlot {
             }
         }
         this.i++;
+    }
+    installClickListeners() {
+        let canvas = this.canvas;
+        let clicked = false;
+        canvas.addEventListener('mousedown', (e) => clicked = true);
+        canvas.addEventListener('mouseup', (e) => clicked = false);
+        canvas.addEventListener('mouseout', (e) => clicked = false);
+        let listener = (e) => {
+            if (! clicked ) { return; }
+            if (this.dims === undefined || this.lastModel === undefined) {
+                return;
+            }
+            const pos = getCursorPosition(canvas, e);
+            let row = Math.floor( pos.y / this.ph );
+            let col = Math.floor( pos.x / this.pw );
+            let x = this.pmin + this.prange * (pos.x - col * this.pw) / this.pw;
+            let y = this.pmin + this.prange * (pos.y - row * this.ph) / this.ph;
+            let tuples = [[row,y],[col,x]];
+            //console.log({ pos: pos, tuple:tuples });
+            // console.log(`X: ${x} Y: ${y} R: ${row} C: ${col}`);
+            this.lastModel.setDims([[row,y],[col,x]]);
+        };
+        // canvas.addEventListener('click', listener);
+        canvas.addEventListener('mousemove', listener);
     }
 }
 
