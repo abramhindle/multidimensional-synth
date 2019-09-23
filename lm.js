@@ -3,6 +3,8 @@
 const LM = require('ml-levenberg-marquardt');
 const Benchmark = require('benchmark');
 const _ = require('lodash');
+const OSC = require('osc-js');
+
 // let dims = 10;
 // function that receives the parameters and returns
 // a function with the independent variable as a parameter
@@ -254,7 +256,7 @@ class PointPlot {
     update(model) {
         this.drawPoints(model);
     }
-    drawPoint(col,row,x,y,color) {
+    drawPoint(col,row,x,y,color,bw) {
         let pmax = this.pmax;
         let pmin = this.pmin;
         if (x < pmin || x > pmax || y < pmin || y > pmax) {
@@ -265,7 +267,7 @@ class PointPlot {
         let prange = this.prange;
         var px = xoffset + this.pw * (x - pmin)/prange;
         var py = yoffset + this.ph * (y - pmin)/prange;        
-        var bw = 5;
+        bw = bw || 5;
         ctx.fillStyle = color;
         ctx.fillRect(px - bw/2, py - bw/2, bw, bw);
     }
@@ -300,8 +302,9 @@ class PointPlot {
                 let vx = model.at(col);
                 let vy = model.at(row);
                 let color = `hsl( ${this.i % 360}, 75%, 50%)`;
-                let boldColor = `hsl( 61, 94%, 53%)`;
+                let boldColor = `hsl( 61, 100%, 75%)`;
                 this.drawPoint(col,row,vx,vy,boldColor);
+                this.drawPoint(col,row,vx,vy,'rgb(0,0,0)',3);
                 this.putLastPoint(col,row,vx,vy,color);
             }
         }
@@ -332,8 +335,24 @@ class PointPlot {
         canvas.addEventListener('mousemove', listener);
     }
 }
+class OSCListener {
+    constructor(path) {
+        this.osc = new OSC();
+        this.path = "/point";
+        if (path) {
+            this.path = path;
+        }
+        this.osc.open(); // connect by default to ws://localhost:8080
+    }
+    update(model) {
+        var message = new OSC.Message(this.path, ...(model.copyOfVec()));
+        this.osc.send(message);
+    }
+}
+
 
 exports.installSliders = installSliders;
 exports.PointModel = PointModel;
 exports.HyperSphere = circle;
 exports.PointPlot = PointPlot;
+exports.OSCListener = OSCListener;
